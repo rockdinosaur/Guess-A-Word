@@ -1,36 +1,12 @@
 $(function() {
   var availableWords = ['apple', 'banana', 'orange', 'pear'];
 
-  function randomWord() {
-    var randomIdx = Math.floor(Math.random() * availableWords.length);
-    var splicedWord = availableWords.splice(randomIdx, 1)[0];
-    if (splicedWord) {
-      return splicedWord;
-    } else {
-      return undefined;
-    }
-  }
-
-  function bindKeypress() {
-    $(document).keypress(function(e) {
-      if (e.key.match(/[a-z]/i) && !currentGame.allGuessedLetters.includes(e.key)) {
-        currentGame.allGuessedLetters.push(e.key);
-        currentGame.displayGuess(e.key);
-        currentGame.guessLetter(e.key);
-      }
-    })
-  }
-
-  function unbindKeyPress() {
-    $(document).unbind("keypress");
-  }
-
   $(".play-again").click(function(e) {
     e.preventDefault();
-    currentGame.init();
+    game.init();
   })
 
-  var currentGame = {
+  var game = {
     guessLetter: function(letter) {
       if (this.word.split("").includes(letter)) {
         var matchingIdxs = [];
@@ -51,6 +27,31 @@ $(function() {
       }
     },
 
+    generateRandomWord: function() {
+      var randomIdx = Math.floor(Math.random() * availableWords.length);
+      var splicedWord = availableWords.splice(randomIdx, 1)[0];
+      if (splicedWord) {
+        return splicedWord;
+      } else {
+        return undefined;
+      }
+    },
+
+    bindKeypress: function() {
+      var self = this;
+      $(document).keypress(function(e) {
+        if (e.key.match(/[a-z]/i) && !self.allGuessedLetters.includes(e.key)) {
+          self.allGuessedLetters.push(e.key);
+          self.displayGuess(e.key);
+          self.guessLetter(e.key);
+        }
+      })
+    },
+
+    unbindKeyPress: function() {
+      $(document).unbind("keypress");
+    },
+
     displayGuess: function(letter) {
       var guessedLetter = document.createElement("li");
       $(guessedLetter).text(letter);
@@ -64,7 +65,6 @@ $(function() {
     },
 
     setPlaceholders: function() {
-      $(".word ul li").remove();
       var newLetter;
       this.word.split("").forEach(function(letter) {
         newLetter = document.createElement("li");
@@ -98,28 +98,52 @@ $(function() {
         $(document.body).animate({
           "background-color": "#65c9f6"
         }, 1000);
-      } else {
+      } else if (state === 'lose') {
         $(".game-end .message").text("Sorry, you've run out of guesses.");
         $(document.body).animate({
           "background-color": "#f66565"
         }, 1000);
+      } else if (state === 'finished') {
+        $(".game-end .message").text("We're all out of words for you!");
+        $(document.body).animate({
+          "background-color": "#e5e2e2"
+        }, 1000);
       }
       $(".game-end").show();
-      unbindKeyPress();
+      this.unbindKeyPress();
+    },
+
+    verifyAvailableWords: function() {
+      if (availableWords.length === 0) {
+        this.displayMessage('finished');
+        return false;
+      };
+      return true;
+    },
+
+    clearDisplay: function() {
+      $(".game-end").hide();
+      $(".word ul li").remove();
+      $(".guesses ul li").remove();
     },
 
     init: function() {
-      this.maxAttempts = 6;
-      this.attempts = 0;
-      this.allGuessedLetters = [];
-      this.wrongGuessedLetters = [];
-      this.word = randomWord();
-      this.setPlaceholders();
-      this.positionApples();
-      bindKeypress();
-      $(".game-end").hide();
+      this.clearDisplay();
+      if (this.verifyAvailableWords()) {
+        this.maxAttempts = 6;
+        this.attempts = 0;
+        this.allGuessedLetters = [];
+        this.wrongGuessedLetters = [];
+        this.word = this.generateRandomWord();
+        this.setPlaceholders();
+        this.positionApples();
+        this.bindKeypress();
+      } else {
+        return;
+      }
+      return this;
     }
   }
 
-  currentGame.init();
+  currentGame = Object.create(game).init();
 })
